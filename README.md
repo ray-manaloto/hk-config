@@ -1,0 +1,218 @@
+# hk-config
+
+Shared [hk](https://github.com/jdx/hk) presets and Pkl helpers for the ray-manaloto projects. Our own trimmed copy of [risu729/hk-config](https://github.com/risu729/hk-config) (MIT), not a chain to it.
+
+Design goal: **strict linters** (warnings as errors, stale suppressions reported, pedantic
+modes where available) with **opt-in** step selection. hk selects files; each tool enforces
+quality via CLI flags and its own config file.
+
+For how to extend the catalog, see upstream's [AGENTS.md](https://github.com/risu729/hk-config/blob/main/AGENTS.md).
+
+## Usage
+
+Use the latest hk. Replace `<version>` with an hk-config release tag or commit.
+
+```pkl
+amends "https://raw.githubusercontent.com/ray-manaloto/hk-config/<version>/presets.pkl"
+import "https://raw.githubusercontent.com/ray-manaloto/hk-config/<version>/helpers.pkl"
+
+steps = helpers.pick(new Listing {
+  "github-actions"
+  "tombi-format"
+  "oxfmt"
+})
+```
+
+Unknown step names fail at eval time.
+
+`presets.pkl` sets `min_hk_version` only. Assign `steps = helpers.pick(...)` to use hk's
+implicit `check`, `fix`, and `pre-commit` hooks. `check` checks files; `fix` fixes without
+staging; `pre-commit` fixes and stages selected files while stashing unstaged changes.
+Use explicit hooks to customize these defaults, or `helpers.standardHooks(...)` to
+build them from picked steps.
+
+`pick()` accepts **group keys** (whole group) or **step keys** (one step from inside a group).
+When `oxfmt` is picked with formatters (`tombi`, `yaml`, `rumdl`, or their `*-format` steps), conflicting
+paths are auto-excluded from oxfmt.
+
+#### Pick a whole group
+
+```pkl
+helpers.pick(new Listing { "hk" })  // hk-validate, pkl, pkl-format
+```
+
+#### Pick specific steps only
+
+```pkl
+helpers.pick(new Listing {
+  "hk-validate"   // not pkl / pkl-format
+  "jactionlint"  // not the whole github-actions group
+})
+```
+
+### Examples
+
+- [dotfiles/hk.pkl](https://github.com/risu729/dotfiles/blob/main/hk.pkl)
+- [biwa/hk.pkl](https://github.com/risu729/biwa/blob/main/hk.pkl)
+
+### Catalog keys
+
+#### Groups
+
+| Key | Steps |
+| --- | --- |
+| `github-actions` | `jactionlint`, `pinact`, `ghalint`, `ghalint-action`, `zizmor` |
+| `shell` | `shfmt`, `shellcheck` |
+| `rust` | `clippy`, `rustfmt`, `cargo-deny` |
+| `tombi` | `tombi`, `tombi-format` |
+| `rumdl` | `rumdl`, `rumdl-format` |
+| `yaml` | `yamllint`, `yamlfmt` |
+| `mise` | `mise-fmt`, `mise-tasks` |
+| `hygiene` | `newlines`, `trailing-whitespace`, `mixed-line-ending`, `byte-order-marker`, `fix-smart-quotes`, `check-merge-conflict`, `check-case-conflict`, `check-symlinks`, `destroyed-symlinks`, `forbid-submodules`, `check-shebang-scripts-are-executable`, `check-executables-have-shebangs` |
+| `hk` | `hk-validate`, `pkl`, `pkl-format` |
+
+#### Steps
+
+All pickable step keys and the **mise tools** to install for each (`hk install --mise`).
+
+| Step | mise tools |
+| --- | --- |
+| `jactionlint` | `jactionlint`, `shellcheck` |
+| `pinact` | `pinact` |
+| `ghalint` | `ghalint` |
+| `ghalint-action` | `ghalint` |
+| `zizmor` | `zizmor` |
+| `shfmt` | `shfmt` |
+| `shellcheck` | `shellcheck` |
+| `clippy` | `cargo` |
+| `rustfmt` | `cargo` |
+| `cargo-deny` | `cargo-deny` |
+| `mise-fmt` | `mise` |
+| `mise-tasks` | `mise` |
+| `hk-validate` | `hk` |
+| `pkl` | `pkl` |
+| `pkl-format` | `pkl` |
+| `newlines` | `hk` |
+| `trailing-whitespace` | `hk` |
+| `mixed-line-ending` | `hk` |
+| `byte-order-marker` | `hk` |
+| `fix-smart-quotes` | `hk` |
+| `check-merge-conflict` | `hk` |
+| `check-case-conflict` | `hk` |
+| `check-symlinks` | `hk` |
+| `destroyed-symlinks` | `hk` |
+| `forbid-submodules` | `hk` |
+| `check-shebang-scripts-are-executable` | `hk` |
+| `check-executables-have-shebangs` | `hk` |
+| `oxlint` | `oxlint` |
+| `oxfmt` | `oxfmt` |
+| `tombi` | `tombi` |
+| `tombi-format` | `tombi` |
+| `rumdl` | `rumdl` |
+| `rumdl-format` | `rumdl` |
+| `typos` | `typos` |
+| `yamllint` | `yamllint` |
+| `yamlfmt` | `yamlfmt` |
+| `hadolint` | `hadolint` |
+| `lychee` | `lychee` |
+| `betterleaks` | `betterleaks` |
+| `tsc` | `npm:typescript` |
+
+Step options, override reasons, and CLI flags live in [`helpers.pkl`](helpers.pkl).
+
+### GitHub Actions linting
+
+The `jactionlint` step runs the `pedantic` profile to check workflow syntax,
+expressions, security, and policy, including current GitHub runner labels. Every
+reported severity fails the check (`--strict-exit`). It is check-only and preserves
+the strict shellcheck options. The `github-actions` group also runs `zizmor --pedantic`
+for security audits, with `pinact` before the ghalint and zizmor steps.
+
+### Repo-specific overrides
+
+```pkl
+amends "https://raw.githubusercontent.com/ray-manaloto/hk-config/<version>/presets.pkl"
+import "https://raw.githubusercontent.com/ray-manaloto/hk-config/<version>/helpers.pkl"
+
+steps = (helpers.pick(new Listing {
+  "tombi-format"
+  "oxfmt"
+  "tsc"
+})) {
+  ["tsc-api"] = (helpers.lintSteps()["tsc"]) {
+    workspace_indicator = "tsconfig.api.json"
+  }
+}
+```
+
+`hk-validate` watches `hk.pkl`, `hk.local.pkl`, `.config/hk.pkl`, and
+`.config/hk.local.pkl`. Extend its `glob` for additional preset files. When amending this
+custom step, repeat `check = "hk validate"` until the [evaluator inheritance bug](https://github.com/risu729/hk-config/issues/124)
+is fixed.
+
+### Profiles (`flaky`)
+
+The `lychee` step sets `profiles = List("flaky")`, so it is skipped unless you pass
+`--profile flaky` (or `mise run check --flaky` / `--lint --flaky`).
+
+```toml
+# tasks.toml
+[check]
+usage = '''
+flag "--lint" help="Run hk check instead of fix"
+flag "--flaky" help="Also enable hk flaky profile (lychee)"
+'''
+run = """
+hk \
+  {% if usage.flaky %}--profile flaky {% endif %}\
+  {% if usage.lint %}check{% else %}fix{% endif %} \
+  --all --no-progress --no-fail-fast
+"""
+description = "Run hk linters and formatters."
+```
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  lint:
+    steps:
+      - name: Run check
+        if: github.event_name != 'schedule'
+        run: mise run check --lint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Run flaky check
+        if: github.event_name == 'schedule'
+        run: mise run check --lint --flaky
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+```
+
+### Hook behavior
+
+- `hk fix` leaves changes unstaged by default. Use `--stage` or hook-level `stage = true`
+  when staging is intended; a step's `stage` patterns only filter what gets staged.
+- `check_first` defaults to `false`. Set it explicitly for a slow fixer that benefits
+  from a probe. Diff probes still run in fix mode; list probes also run when staging fixes.
+- Picking `hygiene` rejects destroyed symlinks, submodules, and shebang scripts
+  without executable permissions. Pick individual checks if a repo intentionally allows these.
+- Avoid `local steps` when amending the schema; use a distinct name such as `workerSteps`
+  until the [evaluator name-resolution bug](https://github.com/risu729/hk-config/issues/124) is fixed.
+
+### Updating
+
+Extend [`renovate-config`](https://github.com/ray-manaloto/renovate-config) in your repo — it bumps
+`presets.pkl` and `helpers.pkl` URL tags in `hk.pkl`.
+
+## Layout
+
+| File | Purpose |
+|------|---------|
+| `presets.pkl` | `min_hk_version` (no hooks) |
+| `helpers.pkl` | `lintSteps()`, `pick()`, `standardHooks()` |
+| `hk.pkl` | In-repo dogfood |
+
+## License
+
+MIT, see [LICENSE](LICENSE). Derived from risu729/hk-config.
