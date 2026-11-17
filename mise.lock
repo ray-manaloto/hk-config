@@ -70,6 +70,28 @@ checksum_source = "mise-versions"
 url = "https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/lycheeverse/lychee/releases/assets/409957951"
 
+[[tools.node]]
+version = "26.13.1"
+backend = "core:node"
+specifiers = ["26.13.1"]
+
+[tools.node."platforms.linux-x64"]
+checksum = "sha256:518674de2b621728a5e4486f5fb3b7d2900bb3cc4aa97969edaa463db99f9778"
+url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-linux-x64.tar.gz"
+
+[tools.node."platforms.macos-arm64"]
+checksum = "sha256:aec2514ea1ceb2ba52455e9ec65986f6749a06dd759e5db2a72e6889668c9735"
+url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-darwin-arm64.tar.gz"
+
+[[tools."npm:semantic-release"]]
+version = "26.0.1"
+aube = { path = ".mise/locks/npm-semantic-release/26.0.1", digest = "sha256:df1e22ebf75d6d352a34d6767dc8116ca6d7afb89297f0d4d18bebb6486de96a" }
+backend = "npm:semantic-release"
+specifiers = ["26.0.1"]
+
+[tools."npm:semantic-release".provenance]
+repository = "github.com/semantic-release/semantic-release"
+
 [[tools.pinact]]
 version = "5.0.2"
 backend = "aqua:suzuki-shunsuke/pinact"
