@@ -3,5 +3,9 @@ amends "../presets.pkl"
 
 import "../helpers.pkl"
 
-// Upstream owns builtin coverage; test only our stricter jactionlint policy.
-steps = helpers.pick(new Listing { "jactionlint" })
+// Upstream owns builtin coverage; test only our stricter jactionlint policy and custom steps.
+steps =
+  helpers.pick(new Listing {
+    "jactionlint"
+    "agnix"
+  })
