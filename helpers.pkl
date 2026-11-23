@@ -325,6 +325,104 @@ function lintSteps(): Mapping<String, Config.Step | Config.Group> =
       ["betterleaks"] = Builtins.betterleaks
       ["tsc"] = Builtins.tsc
       ["hk"] = hk
+      ["agnix"] = new Config.Step {
+        // Strict linter for agent instructions, skills, hooks, rules, and MCP configs.
+        // SARIF preserves locations, severity, and rule IDs for hk diagnostics.
+        glob =
+          List(
+            "**/AGENTS.md",
+            "**/CLAUDE.md",
+            "**/GEMINI.md",
+            "**/SKILL.md",
+            ".agnix.toml",
+            ".claude/**",
+            ".codex/**",
+            ".gemini/**",
+            ".agents/**",
+            ".agent/**",
+            ".opencode/**",
+            ".cursor/**",
+            ".pi/**",
+            ".grok/**",
+            "**/.claude/**",
+            "**/.codex/**",
+            "**/.gemini/**",
+            "**/.agents/**",
+            "**/.config/opencode/**",
+            "**/.config/agents/**",
+          )
+        check = "agnix --strict --format sarif {{ files }}"
+        diagnostic_format = "sarif"
+        tests {
+          local const cfg = ".agnix.toml"
+          local const badTrigger = ".gemini/config/rules/bad-trigger.md"
+          local const bigRule = ".gemini/config/rules/big.md"
+          local const badSkill = ".agents/skills/Bad_Name/SKILL.md"
+          ["rejects invalid Antigravity rule trigger"] = new Config.StepTest {
+            tmpdir = true
+            before = "git init"
+            files = List(badTrigger)
+            write {
+              [cfg] = "tools = [\"antigravity\"]\n"
+              [badTrigger] = "---\ntrigger: bogus\n---\nhi\n"
+            }
+            expect {
+              code = 1
+              diagnostics {
+                new {
+                  path = badTrigger
+                  line = 2
+                  severity = "error"
+                  rule = "AGY-RL-001"
+                  message = "recognized trigger"
+                }
+              }
+            }
+          }
+          ["rejects Antigravity rule exceeding 24000 bytes"] = new Config.StepTest {
+            tmpdir = true
+            before = "git init"
+            files = List(bigRule)
+            write {
+              [cfg] = "tools = [\"antigravity\"]\n"
+              [bigRule] = "---\ntrigger: always_on\n---\n\("x".repeat(25000))\n"
+            }
+            expect {
+              code = 1
+              diagnostics {
+                new {
+                  path = bigRule
+                  line = 2
+                  severity = "error"
+                  rule = "AGY-RL-003"
+                  message = "24,000 expanded bytes"
+                }
+              }
+            }
+          }
+          ["rejects invalid SKILL.md name"] = new Config.StepTest {
+            tmpdir = true
+            before = "git init"
+            files = List(badSkill)
+            write {
+              [badSkill] =
+                "---\nname: Bad_Name\ndescription: Use when validating agent configs.\n---\nbody\n"
+            }
+            expect {
+              code = 1
+              diagnostics {
+                new {
+                  path = badSkill
+                  line = 2
+                  severity = "error"
+                  rule = "AS-004"
+                  message = "lowercase letters"
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
 /// Group keys searched when [pick] names a step that is not a top-level catalog key.

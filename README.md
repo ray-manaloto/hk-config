@@ -117,6 +117,7 @@ All pickable step keys and the **mise tools** to install for each (`hk install -
 | `lychee` | `lychee` |
 | `betterleaks` | `betterleaks` |
 | `tsc` | `npm:typescript` |
+| `agnix` | `github:agent-sh/agnix` |
 
 Step options, override reasons, and CLI flags live in [`helpers.pkl`](helpers.pkl).
 
